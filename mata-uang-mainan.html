@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Koinku - Coin Flip</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: linear-gradient(135deg, #fff7d6, #ffe0f0);
+    color: #3b2a1a;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top));
+    background: #ffcf33; border-bottom: 4px dashed #e08a00;
+  }
+  header svg { width: 48px; height: 48px; flex: none; }
+  header h1 { font-size: 1.35rem; line-height: 1.1; }
+  header p { font-size: .8rem; opacity: .8; }
+
+  main { width: 100%; max-width: 480px; margin: 0 auto; padding: 14px 14px 80px; display: grid; gap: 14px; }
+  .card { background: #fff; border-radius: 18px; padding: 18px 16px; box-shadow: 0 5px 0 #e9c46a; text-align: center; }
+  .card h2 { margin-bottom: 10px; font-size: 1.15rem; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; justify-self: center;
+    background: #fff; border: 3px solid #e9c46a; border-radius: 999px;
+    padding: 8px 16px; font-weight: 700; font-size: .95rem; cursor: pointer;
+  }
+  .chip small { font-weight: 400; opacity: .6; }
+
+  .scene { perspective: 700px; height: 160px; display: flex; justify-content: center; align-items: center; position: relative; }
+  #koin { width: 116px; height: 116px; transform-style: preserve-3d; transition: transform 1.6s cubic-bezier(.2,.7,.3,1); position: relative; }
+  .sisi { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .sisi svg { width: 100%; height: 100%; }
+  .sisi.angka { transform: rotateY(180deg); }
+  #apung { position: relative; perspective: 700px; }
+  #apung.idle { animation: apung 2.4s ease-in-out infinite; }
+  @keyframes apung {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50% { transform: translateY(-14px) rotate(3deg); }
+  }
+  #apung.mendarat { animation: mendarat .7s ease-out; }
+  @keyframes mendarat {
+    0% { transform: translateY(-20px) scale(1.1, .9); }
+    30% { transform: translateY(0) scale(1.2, .8); }
+    55% { transform: translateY(-12px) scale(.96, 1.04); }
+    80% { transform: translateY(0) scale(1.06, .94); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  #bayang { position: absolute; bottom: 4px; left: 50%; width: 90px; height: 14px; margin-left: -45px; border-radius: 50%; background: rgba(0,0,0,.2); }
+  #bayang.idle { animation: bayangIdle 2.4s ease-in-out infinite; }
+  @keyframes bayangIdle {
+    0%, 100% { transform: scale(1); opacity: .28; }
+    50% { transform: scale(.72); opacity: .12; }
+  }
+  .scene.debu::after {
+    content: ""; position: absolute; bottom: 6px; left: 50%; width: 60px; height: 16px; margin-left: -30px;
+    border: 3px solid rgba(160,120,40,.5); border-radius: 50%; animation: debu .7s ease-out forwards;
+  }
+  @keyframes debu { from { transform: scale(.5); opacity: 1; } to { transform: scale(2.6); opacity: 0; } }
+  #koin.terbang { animation: loncat 1.6s ease-out; }
+  @keyframes loncat { 0% { margin-top: 0; } 40% { margin-top: -60px; } 100% { margin-top: 0; } }
+  .scene.glow::before {
+    content: ""; position: absolute; width: 180px; height: 180px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,230,90,.9), rgba(255,230,90,0) 70%);
+    animation: sinar .9s ease-out forwards;
+  }
+  @keyframes sinar { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+  .scene.goyang { animation: goyang .4s; }
+  @keyframes goyang { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+  .progress { font-size: .85rem; margin-bottom: 4px; }
+  .dots { display: flex; justify-content: center; gap: 8px; margin-top: 6px; }
+  .dot { width: 20px; height: 20px; border-radius: 50%; background: #eee; border: 3px solid #e9c46a; transition: background .3s; }
+  .dot.on { background: #f4a300; }
+
+  .form { display: flex; gap: 8px; margin-top: 14px; }
+  input[type=text] {
+    flex: 1; min-width: 0; padding: 14px 10px; font-size: 16px; border-radius: 12px;
+    border: 3px solid #e9c46a; outline: none; text-align: center;
+  }
+  input[type=text]:focus { border-color: #e08a00; }
+  button {
+    border: none; border-radius: 12px; padding: 14px 18px; font-size: 1rem; font-weight: 700;
+    cursor: pointer; background: #7ed957; box-shadow: 0 4px 0 rgba(0,0,0,.2); font-family: inherit;
+  }
+  button:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.2); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .reset { background: #cfd8dc; margin-top: 10px; padding: 10px 16px; font-size: .9rem; }
+  #pesan { margin-top: 10px; min-height: 1.5em; font-weight: 600; font-size: .95rem; }
+  .benar { color: #2e9e2e; }
+  .salah { color: #d63a3a; }
+  .hint { font-size: .75rem; opacity: .65; margin-top: 6px; }
+  .suara { font-size: .85rem; margin-top: 8px; opacity: .85; display: inline-flex; align-items: center; gap: 6px; }
+
+  /* ---------- Tab kanan ---------- */
+  #tabBtn {
+    position: fixed; right: 0; top: 120px; z-index: 40;
+    width: 46px; height: 58px; padding: 0;
+    background: #ff9f1c; border: 3px solid #b36b00; border-right: none;
+    border-radius: 16px 0 0 16px; box-shadow: -3px 4px 0 rgba(0,0,0,.2);
+    display: flex; align-items: center; justify-content: center; font-size: 1.6rem;
+    transition: right .3s ease, background .2s;
+  }
+  #tabBtn.buka { background: #ffd04d; right: min(78vw, 280px); }
+  #menu {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(78vw, 280px); z-index: 39;
+    background: #fff8e1; border-left: 4px solid #b36b00;
+    transform: translateX(100%); transition: transform .3s ease;
+    padding: 90px 14px 20px; display: flex; flex-direction: column; gap: 12px;
+    box-shadow: -6px 0 18px rgba(0,0,0,.2);
+  }
+  #menu.buka { transform: translateX(0); }
+  #menu h3 { font-size: .8rem; letter-spacing: 2px; opacity: .6; }
+  .itemMenu { text-align: left; background: #fff; border: 3px solid #e9c46a; box-shadow: none; display: flex; align-items: center; gap: 10px; }
+  .itemMenu.aktif { background: #ffe082; border-color: #e08a00; }
+  .itemMenu span { display: block; }
+  .itemMenu small { display: block; font-weight: 400; font-size: .75rem; opacity: .7; }
+  #latar { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 38; display: none; }
+  #latar.buka { display: block; }
+
+  /* ---------- Leaderboard ---------- */
+  #lbJudul { font-size: 1.35rem; }
+  #lbSub { font-size: .85rem; opacity: .75; margin-bottom: 12px; }
+  .lbHead { border-radius: 14px; padding: 12px; margin-bottom: 12px; color: #fff; }
+  #lbList { list-style: none; display: grid; gap: 8px; text-align: left; }
+  #lbList li {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border-radius: 12px; background: #f3f3f3; border: 2px solid transparent;
+  }
+  #lbList li.me { border-color: #e08a00; }
+  .rank {
+    width: 34px; height: 34px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; color: #fff; background: #9e9e9e; text-shadow: 0 1px 0 rgba(0,0,0,.3);
+  }
+  .r1 { background: linear-gradient(135deg, #ffe066, #d4a000); }
+  .r2 { background: linear-gradient(135deg, #e8e8e8, #a8a8a8); }
+  .r3 { background: linear-gradient(135deg, #e6a066, #a85f20); }
+  #lbList li.l1 { background: #fff4c2; }
+  #lbList li.l2 { background: #eeeeee; }
+  #lbList li.l3 { background: #f6e0cf; }
+  .nama { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nama small { display: block; font-weight: 400; font-size: .72rem; opacity: .6; }
+  .nilai { font-weight: 900; font-size: 1.3rem; color: #e08a00; }
+  li.kosong .nama, li.kosong .nilai { color: #aaa; font-weight: 500; }
+
+  /* ---------- Modal nama ---------- */
+  #modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 80; display: none; align-items: center; justify-content: center; padding: 20px; }
+  #modal.buka { display: flex; }
+  #modal .kotak { background: #fff; border-radius: 20px; padding: 22px; width: 100%; max-width: 340px; text-align: center; }
+  #modal h2 { margin-bottom: 6px; }
+  #modal p { font-size: .85rem; opacity: .7; margin-bottom: 14px; }
+  #modal input { width: 100%; margin-bottom: 12px; }
+  #modal button { width: 100%; }
+
+  .batal { background: #cfd8dc; }
+  .modalx { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 90; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .modalx.buka { display: flex; }
+  .kotakx { background: #fff; border-radius: 20px; padding: 22px 20px; width: 100%; max-width: 340px; text-align: center; }
+  .kotakx h2 { margin: 8px 0 6px; }
+  .kotakx p { font-size: .9rem; margin-bottom: 8px; }
+  .kotakx .awas { color: #d63a3a; font-weight: 600; }
+  .ikon {
+    width: 58px; height: 58px; border-radius: 50%; margin: 0 auto;
+    background: #ff9f1c; color: #fff; font-size: 2.2rem; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; border: 4px solid #e08a00;
+  }
+  .baris { display: flex; gap: 10px; margin-top: 12px; }
+  .baris button { flex: 1; }
+  #partikel { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 70; }
+  .melayang {
+    position: fixed; z-index: 75; font-weight: 900; font-size: 1.6rem; color: #2e9e2e;
+    text-shadow: 0 2px 0 #fff; pointer-events: none; animation: naik 1.2s ease-out forwards; white-space: nowrap;
+  }
+  @keyframes naik { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-80px); opacity: 0; } }
+  footer { text-align: center; padding: 0 0 20px; font-size: .75rem; opacity: .6; }
+</style>
+</head>
+<body>
+
+<canvas id="partikel"></canvas>
+
+<header>
+  <svg viewBox="0 0 100 100" aria-label="Logo koin mainan">
+    <circle cx="50" cy="50" r="46" fill="#f4a300" stroke="#b36b00" stroke-width="5"/>
+    <circle cx="50" cy="50" r="36" fill="#ffd04d" stroke="#b36b00" stroke-width="3" stroke-dasharray="6 4"/>
+    <text x="50" y="64" text-anchor="middle" font-size="42" font-weight="900" fill="#b36b00" font-family="Arial">K</text>
+    <ellipse cx="34" cy="30" rx="9" ry="5" fill="#fff" opacity=".6" transform="rotate(-30 34 30)"/>
+  </svg>
+  <div>
+    <h1>Koinku Coin Flip</h1>
+    <p>Tebak sisi uang seribu: Kepala atau Angka!</p>
+  </div>
+</header>
+
+<!-- Tab di ujung kanan -->
+<button id="tabBtn" aria-label="Buka menu" aria-expanded="false">📁</button>
+<div id="latar"></div>
+<nav id="menu">
+  <h3>MENU</h3>
+  <button class="itemMenu" data-view="game"><span>🎮 Main Game<small>Kembali ke coin flip</small></span></button>
+  <h3>LEADERBOARD</h3>
+  <button class="itemMenu" data-view="streak"><span>🔥 Raja Streak<small>Streak terbanyak</small></span></button>
+  <button class="itemMenu" data-view="benar"><span>🎯 Master Tebakan<small>Tebakan benar terbanyak</small></span></button>
+</nav>
+
+<main>
+  <button class="chip" id="chipNama" type="button"><span id="namaPemain">-</span> <small>ganti</small></button>
+
+  <!-- Tampilan game -->
+  <section class="card" id="viewGame">
+    <h2>🪙 Tebak Koinnya</h2>
+    <div class="scene" id="scene">
+      <div id="bayang" class="idle"></div>
+      <div id="apung" class="idle">
+      <div id="koin">
+        <div class="sisi kepala">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="47" fill="#c9ced2" stroke="#6f7980" stroke-width="3"/>
+            <circle cx="50" cy="50" r="44" fill="none" stroke="#eef1f3" stroke-width="1.5" stroke-dasharray="1.5 2.5"/>
+            <circle cx="50" cy="50" r="32" fill="#f2bf40" stroke="#a87410" stroke-width="3"/>
+            <ellipse cx="34" cy="32" rx="8" ry="4" fill="#fff" opacity=".45" transform="rotate(-35 34 32)"/>
+            <path d="M50 44 Q38 34 27 36 Q31 44 36 48 Q31 50 30 56 Q40 54 50 52 Z" fill="#7a4e00"/>
+            <path d="M50 44 Q38 34 27 36 Q31 44 36 48 Q31 50 30 56 Q40 54 50 52 Z" fill="#7a4e00" transform="translate(100 0) scale(-1 1)"/>
+            <circle cx="50" cy="37" r="5" fill="#7a4e00"/>
+            <path d="M54 36 L60 39 L54 41 Z" fill="#7a4e00"/>
+            <path d="M43 46 H57 V58 Q57 65 50 68 Q43 65 43 58 Z" fill="#7a4e00"/>
+            <polygon points="50,50 51.2,53 54.4,53 51.8,55 52.8,58 50,56.2 47.2,58 48.2,55 45.6,53 48.8,53" fill="#f2bf40"/>
+            <text x="50" y="14" text-anchor="middle" font-size="7" font-weight="900" fill="#4d565c" font-family="Arial" letter-spacing="1">SERIBU</text>
+            <text x="50" y="92" text-anchor="middle" font-size="7" font-weight="900" fill="#4d565c" font-family="Arial" letter-spacing="1">KEPALA</text>
+          </svg>
+        </div>
+        <div class="sisi angka">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="47" fill="#c9ced2" stroke="#6f7980" stroke-width="3"/>
+            <circle cx="50" cy="50" r="44" fill="none" stroke="#eef1f3" stroke-width="1.5" stroke-dasharray="1.5 2.5"/>
+            <circle cx="50" cy="50" r="32" fill="#f2bf40" stroke="#a87410" stroke-width="3"/>
+            <ellipse cx="34" cy="32" rx="8" ry="4" fill="#fff" opacity=".45" transform="rotate(-35 34 32)"/>
+            <text x="50" y="57" text-anchor="middle" font-size="22" font-weight="900" fill="#7a4e00" font-family="Arial">1000</text>
+            <text x="50" y="68" text-anchor="middle" font-size="6" font-weight="700" fill="#7a4e00" font-family="Arial" letter-spacing="1">KOINKU</text>
+            <text x="50" y="14" text-anchor="middle" font-size="7" font-weight="900" fill="#4d565c" font-family="Arial" letter-spacing="1">SERIBU</text>
+            <text x="50" y="92" text-anchor="middle" font-size="7" font-weight="900" fill="#4d565c" font-family="Arial" letter-spacing="1">ANGKA</text>
+          </svg>
+        </div>
+      </div>
+      </div>
+    </div>
+    <div class="progress">2 tebakan benar = 1 streak
+      <div class="dots"><div class="dot" id="d1"></div><div class="dot" id="d2"></div></div>
+    </div>
+    <form class="form" id="form" autocomplete="off">
+      <input id="jawab" type="text" placeholder="kepala / angka" maxlength="10" autocapitalize="none">
+      <button id="tebak" type="submit">Tebak!</button>
+    </form>
+    <p class="hint">Tebakan benar = +10 poin</p>
+    <p id="pesan"></p>
+    <label class="suara"><input type="checkbox" id="suara" checked> Suara aktif</label>
+  </section>
+
+  <!-- Tampilan leaderboard -->
+  <section class="card" id="viewLb" style="display:none">
+    <div class="lbHead" id="lbHead">
+      <h2 id="lbJudul"></h2>
+      <p id="lbSub"></p>
+    </div>
+    <ol id="lbList"></ol>
+    <button class="reset" id="kembali" type="button">🎮 Kembali main</button>
+  </section>
+</main>
+
+<footer>Koinku &copy; 2026 - Game mainan, bukan uang sungguhan</footer>
+
+<!-- Modal nama -->
+<div id="modal">
+  <form class="kotak" id="formNama" autocomplete="off">
+    <h2>Siapa namamu?</h2>
+    <p>Nama dipakai di leaderboard.</p>
+    <input id="inputNama" type="text" maxlength="12" placeholder="Nama pemain">
+    <p id="errNama" class="salah" style="min-height:1.2em;font-size:.85rem;opacity:1;margin-bottom:8px"></p>
+    <button type="submit">Mulai</button>
+    <button type="button" id="batalNama" class="batal" style="display:none;margin-top:8px">Batal</button>
+  </form>
+</div>
+
+<!-- Konfirmasi ganti nama -->
+<div class="modalx" id="modalKonfirm">
+  <div class="kotakx">
+    <div class="ikon">!</div>
+    <h2>Ganti nama?</h2>
+    <p>Apakah kamu ingin mengganti namamu?</p>
+    <p class="awas">Progresmu (streak, tebakan benar, dan poin) akan hilang.</p>
+    <div class="baris">
+      <button type="button" id="konfirmYes">Yes</button>
+      <button type="button" id="konfirmNo" class="batal">No</button>
+    </div>
+  </div>
+</div>
+
+<!-- Peringatan jeda 5 jam -->
+<div class="modalx" id="modalPeringatan">
+  <div class="kotakx">
+    <div class="ikon">!</div>
+    <h2>Tunggu dulu!</h2>
+    <p>Kamu sudah mengganti namamu sebelumnya. Kamu bisa mengganti nama lagi dalam <b id="sisaJeda"></b>.</p>
+    <p class="awas">Ingat, mengganti nama akan menghapus progresmu.</p>
+    <div class="baris">
+      <button type="button" id="peringatanOk">Mengerti</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const POIN_BENAR = 10;
+  const $ = (id) => document.getElementById(id);
+
+  /* ---------- Data ---------- */
+  let db = { pemain: "", data: {} };
+  try {
+    const s = JSON.parse(localStorage.getItem("koinku_v3"));
+    if (s && s.data) db = s;
+  } catch (e) {}
+  function simpan() { try { localStorage.setItem("koinku_v3", JSON.stringify(db)); } catch (e) {} }
+  function saya() { return db.data[db.pemain]; }
+  function buatPemain(nama) {
+    if (!db.data[nama]) db.data[nama] = { streak: 0, benar: 0, main: 0, poin: 0, progress: 0 };
+    db.pemain = nama; simpan(); tampil();
+  }
+
+  function tampil() {
+    $("namaPemain").textContent = db.pemain || "-";
+    const p = saya();
+    const prog = p ? p.progress : 0;
+    $("d1").classList.toggle("on", prog >= 1);
+    $("d2").classList.toggle("on", prog >= 2);
+  }
+
+  /* ---------- Modal nama ---------- */
+  const JEDA = 5 * 60 * 60 * 1000; // 5 jam
+  let modeGanti = false;
+
+  function bukaModal(ganti) {
+    modeGanti = !!ganti;
+    $("errNama").textContent = "";
+    $("batalNama").style.display = modeGanti ? "" : "none";
+    $("modal").classList.add("buka");
+    $("inputNama").value = "";
+    setTimeout(() => $("inputNama").focus(), 50);
+  }
+  function sisaJeda() { return Math.max(0, (db.gantiAt || 0) + JEDA - Date.now()); }
+  function teksSisa(ms) {
+    const m = Math.ceil(ms / 60000), j = Math.floor(m / 60), mm = m % 60;
+    return j > 0 ? j + " jam " + mm + " menit" : mm + " menit";
+  }
+
+  $("chipNama").addEventListener("click", () => {
+    if (!db.pemain) { bukaModal(false); return; }
+    const sisa = sisaJeda();
+    if (sisa > 0) {
+      $("sisaJeda").textContent = teksSisa(sisa);
+      $("modalPeringatan").classList.add("buka");
+    } else {
+      $("modalKonfirm").classList.add("buka");
+    }
+  });
+  $("peringatanOk").addEventListener("click", () => $("modalPeringatan").classList.remove("buka"));
+  $("konfirmNo").addEventListener("click", () => $("modalKonfirm").classList.remove("buka"));
+  $("konfirmYes").addEventListener("click", () => { $("modalKonfirm").classList.remove("buka"); bukaModal(true); });
+  $("batalNama").addEventListener("click", () => $("modal").classList.remove("buka"));
+
+  $("formNama").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const nama = $("inputNama").value.trim().slice(0, 12);
+    if (!nama) return;
+    if (modeGanti) {
+      if (nama === db.pemain) { $("modal").classList.remove("buka"); return; }
+      if (db.data[nama]) { $("errNama").textContent = "Nama sudah dipakai, pilih yang lain."; return; }
+      delete db.data[db.pemain]; // progres lama hilang
+      $("pesan").textContent = "";
+    }
+    buatPemain(nama);
+    db.gantiAt = Date.now();
+    simpan();
+    modeGanti = false;
+    $("modal").classList.remove("buka");
+  });
+
+  /* ---------- Tab + menu ---------- */
+  function menu(buka) {
+    $("menu").classList.toggle("buka", buka);
+    $("latar").classList.toggle("buka", buka);
+    $("tabBtn").classList.toggle("buka", buka);
+    $("tabBtn").textContent = buka ? "📂" : "📁";
+    $("tabBtn").setAttribute("aria-expanded", buka);
+  }
+  $("tabBtn").addEventListener("click", () => menu(!$("menu").classList.contains("buka")));
+  $("latar").addEventListener("click", () => menu(false));
+
+  const papan = {
+    streak: { judul: "🔥 RAJA STREAK", sub: "Streak terbanyak", kunci: "streak", warna: "linear-gradient(135deg,#ff7a18,#e63946)", satuan: "streak", kedua: "benar", labelKedua: "tebakan benar" },
+    benar:  { judul: "🎯 MASTER TEBAKAN", sub: "Tebakan benar terbanyak", kunci: "benar", warna: "linear-gradient(135deg,#3a86ff,#8338ec)", satuan: "benar", kedua: "streak", labelKedua: "streak" }
+  };
+
+  function tampilkanView(v) {
+    document.querySelectorAll(".itemMenu").forEach(b => b.classList.toggle("aktif", b.dataset.view === v));
+    if (v === "game") {
+      $("viewGame").style.display = ""; $("viewLb").style.display = "none";
+    } else {
+      $("viewGame").style.display = "none"; $("viewLb").style.display = "";
+      gambarPapan(papan[v]);
+    }
+    menu(false);
+    scrollTo(0, 0);
+  }
+  document.querySelectorAll(".itemMenu").forEach(b => b.addEventListener("click", () => tampilkanView(b.dataset.view)));
+  $("kembali").addEventListener("click", () => tampilkanView("game"));
+
+  function gambarPapan(cfg) {
+    $("lbHead").style.background = cfg.warna;
+    $("lbJudul").textContent = cfg.judul;
+    $("lbSub").textContent = cfg.sub;
+    const urut = Object.entries(db.data)
+      .filter(([, v]) => v[cfg.kunci] > 0)
+      .sort((a, b) => b[1][cfg.kunci] - a[1][cfg.kunci] || b[1][cfg.kedua] - a[1][cfg.kedua] || a[0].localeCompare(b[0]))
+      .slice(0, 10);
+    const ol = $("lbList");
+    ol.innerHTML = "";
+    for (let i = 0; i < 10; i++) {
+      const li = document.createElement("li");
+      const rank = document.createElement("div");
+      rank.className = "rank" + (i < 3 ? " r" + (i + 1) : "");
+      rank.textContent = i + 1;
+      const nama = document.createElement("div");
+      nama.className = "nama";
+      const nilai = document.createElement("div");
+      nilai.className = "nilai";
+      if (urut[i]) {
+        const [n, v] = urut[i];
+        nama.textContent = n;
+        const sub = document.createElement("small");
+        sub.textContent = v[cfg.kedua] + " " + cfg.labelKedua;
+        nama.appendChild(sub);
+        nilai.textContent = v[cfg.kunci];
+        if (n === db.pemain) li.classList.add("me");
+      } else {
+        li.classList.add("kosong");
+        nama.textContent = "Belum ada";
+        nilai.textContent = "-";
+      }
+      if (i < 3) li.classList.add("l" + (i + 1));
+      li.append(rank, nama, nilai);
+      ol.appendChild(li);
+    }
+  }
+
+  /* ---------- Suara (WebAudio) ---------- */
+  let audio;
+  function nada(freq, mulai, durasi, tipe, vol) {
+    if (!$("suara").checked) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = tipe || "sine"; o.frequency.value = freq;
+      const t = audio.currentTime + mulai;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol || 0.25, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + durasi);
+      o.connect(g); g.connect(audio.destination);
+      o.start(t); o.stop(t + durasi + 0.05);
+    } catch (e) {}
+  }
+  function suaraPutar() { for (let i = 0; i < 8; i++) nada(900 + (i % 2) * 300, i * 0.18, 0.08, "square", 0.08); }
+  function suaraBenar() { [523, 659, 784, 1047].forEach((f, i) => nada(f, i * 0.1, 0.25, "triangle", 0.3)); }
+  function suaraStreak() { [784, 988, 1175, 1568].forEach((f, i) => nada(f, i * 0.1, 0.3, "triangle", 0.3)); }
+  function suaraSalah() { nada(220, 0, 0.25, "sawtooth", 0.2); nada(165, 0.2, 0.35, "sawtooth", 0.2); }
+
+  /* ---------- Partikel ---------- */
+  const kanvas = $("partikel"), ctx = kanvas.getContext("2d");
+  let partikel = [], animasi = false;
+  function ukur() { kanvas.width = innerWidth; kanvas.height = innerHeight; }
+  addEventListener("resize", ukur); ukur();
+
+  function ledakan(jumlah) {
+    const r = $("koin").getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const warna = ["#ffd400", "#ff8a00", "#7ed957", "#4fc3f7", "#ff6fb5", "#b388ff"];
+    for (let i = 0; i < jumlah; i++) {
+      const sudut = Math.random() * Math.PI * 2, kec = 3 + Math.random() * 8;
+      partikel.push({
+        x: cx, y: cy, vx: Math.cos(sudut) * kec, vy: Math.sin(sudut) * kec - 3,
+        ukuran: 4 + Math.random() * 6, warna: warna[Math.floor(Math.random() * warna.length)],
+        bentuk: Math.random() < 0.3 ? "koin" : (Math.random() < 0.5 ? "kotak" : "bintang"),
+        rot: Math.random() * 6, vr: (Math.random() - .5) * .4, umur: 1
+      });
+    }
+    if (!animasi) { animasi = true; requestAnimationFrame(gambar); }
+  }
+  function bintang(x, y, r) {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const rad = i % 2 ? r * 0.45 : r, a = (Math.PI / 5) * i - Math.PI / 2;
+      ctx.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad);
+    }
+    ctx.closePath(); ctx.fill();
+  }
+  function gambar() {
+    ctx.clearRect(0, 0, kanvas.width, kanvas.height);
+    partikel = partikel.filter(p => p.umur > 0);
+    for (const p of partikel) {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.28; p.vx *= 0.99; p.rot += p.vr; p.umur -= 0.012;
+      ctx.save();
+      ctx.globalAlpha = Math.max(p.umur, 0);
+      ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = p.warna;
+      if (p.bentuk === "kotak") ctx.fillRect(-p.ukuran / 2, -p.ukuran / 2, p.ukuran, p.ukuran * .6);
+      else if (p.bentuk === "bintang") bintang(0, 0, p.ukuran);
+      else { ctx.beginPath(); ctx.ellipse(0, 0, p.ukuran * Math.abs(Math.cos(p.rot * 2)) + 1, p.ukuran, 0, 0, 7); ctx.fillStyle = "#f4a300"; ctx.fill(); ctx.strokeStyle = "#b36b00"; ctx.stroke(); }
+      ctx.restore();
+    }
+    if (partikel.length) requestAnimationFrame(gambar);
+    else { animasi = false; ctx.clearRect(0, 0, kanvas.width, kanvas.height); }
+  }
+  function teksMelayang(teks, warna) {
+    const r = $("koin").getBoundingClientRect();
+    const d = document.createElement("div");
+    d.className = "melayang"; d.textContent = teks;
+    if (warna) d.style.color = warna;
+    d.style.left = Math.max(8, r.left + r.width / 2 - 40) + "px";
+    d.style.top = (r.top - 10) + "px";
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 1300);
+  }
+
+  /* ---------- Game ---------- */
+  let rotasi = 0;
+  function denyut() {}
+
+  $("form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const pesan = $("pesan");
+    if (!db.pemain) { bukaModal(); return; }
+    const jawab = $("jawab").value.trim().toLowerCase();
+    if (jawab !== "kepala" && jawab !== "angka") {
+      pesan.className = "salah";
+      pesan.textContent = "Jawab dengan 'kepala' atau 'angka' ya!";
+      return;
+    }
+
+    $("tebak").disabled = true; $("jawab").disabled = true;
+    pesan.className = ""; pesan.textContent = "Koin berputar...";
+    $("apung").classList.remove("idle", "mendarat");
+    $("bayang").classList.remove("idle");
+
+    const hasil = Math.random() < 0.5 ? "kepala" : "angka";
+    const target = hasil === "kepala" ? 0 : 180;
+    const sekarang = ((rotasi % 360) + 360) % 360;
+    rotasi += 1800 + ((target - sekarang) + 360) % 360;
+
+    const koin = $("koin");
+    koin.classList.remove("terbang"); void koin.offsetWidth;
+    koin.classList.add("terbang");
+    koin.style.transform = "rotateY(" + rotasi + "deg)";
+    suaraPutar();
+
+    setTimeout(() => {
+      const p = saya();
+      p.main++;
+      const scene = $("scene");
+      scene.classList.remove("glow", "goyang", "debu"); void scene.offsetWidth;
+      scene.classList.add("debu");
+      const ap = $("apung");
+      ap.classList.remove("idle", "mendarat"); void ap.offsetWidth; ap.classList.add("mendarat");
+      setTimeout(() => {
+        scene.classList.remove("debu");
+        if (!$("tebak").disabled) {
+          ap.classList.remove("mendarat"); ap.classList.add("idle"); $("bayang").classList.add("idle");
+        }
+      }, 800);
+
+      if (jawab === hasil) {
+        p.benar++; p.poin += POIN_BENAR; p.progress++;
+        scene.classList.add("glow");
+        suaraBenar(); ledakan(80);
+        teksMelayang("+" + POIN_BENAR, "#2e9e2e");
+        pesan.className = "benar";
+        if (p.progress >= 2) {
+          p.progress = 0; p.streak++;
+          setTimeout(() => { suaraStreak(); ledakan(120); teksMelayang("🔥 +1 Streak", "#e08a00"); }, 450);
+          pesan.textContent = "Hasil: " + hasil.toUpperCase() + ". Benar! +" + POIN_BENAR + " poin dan +1 streak 🔥";
+        } else {
+          pesan.textContent = "Hasil: " + hasil.toUpperCase() + ". Benar! +" + POIN_BENAR + " poin. Satu lagi untuk streak.";
+        }
+      } else {
+        p.progress = 0;
+        scene.classList.add("goyang");
+        suaraSalah();
+        pesan.className = "salah";
+        pesan.textContent = "Hasil: " + hasil.toUpperCase() + ". Salah, progres streak diulang.";
+      }
+      $("jawab").value = "";
+      $("jawab").disabled = false; $("tebak").disabled = false;
+      simpan(); tampil();
+    }, 1650);
+  });
+
+  /* ---------- Mulai ---------- */
+  tampilkanView("game");
+  if (!db.pemain || !db.data[db.pemain]) { db.pemain = ""; bukaModal(); } else { tampil(); }
+</script>
+</body>
+</html>
